@@ -20,12 +20,22 @@ use reth_revm::{inspector_handle_register, Database, Evm, EvmBuilder, GetInspect
 
 mod config;
 pub use config::{revm_spec, revm_spec_by_timestamp_after_bedrock};
-mod execute;
+pub mod execute;
 pub use execute::*;
 pub mod l1;
 pub use l1::*;
 
+mod parallel;
 mod error;
+mod versioned_storage;
+mod versioned_state;
+mod api;
+mod executor;
+mod scheduler;
+mod cached_state;
+
+pub(crate) type TxIndex = usize;
+
 pub use error::OptimismBlockExecutionError;
 use revm_primitives::{Bytes, Env, OptimismFields, TxKind};
 

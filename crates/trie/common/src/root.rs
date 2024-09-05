@@ -32,14 +32,16 @@ where
 
     let mut hb = HashBuilder::default();
     let items_len = items.len();
+    println!("sglk items index length is {}",items_len);
     for i in 0..items_len {
         let index = adjust_index_for_rlp(i, items_len);
 
         let index_buffer = alloy_rlp::encode_fixed_size(&index);
 
         value_buffer.clear();
-        encode(&items[index], &mut value_buffer);
 
+        encode(&items[index], &mut value_buffer);
+        println!("sglk items index {}, is {:?}, len is {}",index,value_buffer,value_buffer.len());
         hb.add_leaf(Nibbles::unpack(&index_buffer), &value_buffer);
     }
 

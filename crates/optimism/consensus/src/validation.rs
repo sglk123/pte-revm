@@ -14,6 +14,7 @@ pub fn validate_block_post_execution(
     chain_spec: &ChainSpec,
     receipts: &[Receipt],
 ) -> Result<(), ConsensusError> {
+    println!("sglk verify here step0 ");
     // Before Byzantium, receipts contained state root that would mean that expensive
     // operation as hashing that is required for state root got calculated in every
     // transaction This was replaced with is_success flag.
@@ -30,6 +31,8 @@ pub fn validate_block_post_execution(
             return Err(error)
         }
     }
+
+    println!("sglk verify here step1 ");
 
     // Check if gas used matches the value set in header.
     let cumulative_gas_used =
@@ -57,6 +60,7 @@ fn verify_receipts(
     let receipts_root =
         calculate_receipt_root_optimism(&receipts_with_bloom, chain_spec, timestamp);
 
+    println!("sglk step 3: root :{:?}", &receipts_root);
     // Calculate header logs bloom.
     let logs_bloom = receipts_with_bloom.iter().fold(Bloom::ZERO, |bloom, r| bloom | r.bloom);
 
