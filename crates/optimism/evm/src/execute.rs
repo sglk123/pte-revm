@@ -1,6 +1,6 @@
 //! Optimism block executor.
 
-use crate::{l1::ensure_create2_deployer, OptimismBlockExecutionError, OptimismEvmConfig};
+use crate::{l1::ensure_create2_deployer, OptimismBlockExecutionError, OptimismEvmConfig, parallel};
 use reth_chainspec::{ChainSpec, EthereumHardforks, OptimismHardfork};
 use reth_evm::{
     execute::{
@@ -23,13 +23,14 @@ use revm_primitives::{
     BlockEnv, CfgEnvWithHandlerCfg, EVMError, EnvWithHandlerCfg, ResultAndState,
 };
 use std::sync::Arc;
+use std::time::Instant;
 use tracing::trace;
 
 /// Provides executors to execute regular ethereum blocks
 #[derive(Debug, Clone)]
 pub struct OpExecutorProvider<EvmConfig = OptimismEvmConfig> {
-    chain_spec: Arc<ChainSpec>,
-    evm_config: EvmConfig,
+    pub(crate) chain_spec: Arc<ChainSpec>,
+    pub(crate) evm_config: EvmConfig,
 }
 
 impl OpExecutorProvider {
@@ -107,6 +108,7 @@ where
     /// # Note
     ///
     /// It does __not__ apply post-execution changes.
+    /// todo sglk pte here, stay return parameter && state db should change
     fn execute_pre_and_transactions<Ext, DB>(
         &self,
         block: &BlockWithSenders,
@@ -138,6 +140,8 @@ where
 
         let mut cumulative_gas_used = 0;
         let mut receipts = Vec::with_capacity(block.body.len());
+
+
         for (sender, transaction) in block.transactions_with_sender() {
             // The sum of the transaction’s gas limit, Tg, and the gas utilized in this block prior,
             // must be no greater than the block’s gasLimit.
@@ -174,6 +178,7 @@ where
             self.evm_config.fill_tx_env(evm.tx_mut(), transaction, *sender);
 
             // Execute transaction.
+            // todo pte add here
             let ResultAndState { result, state } = evm.transact().map_err(move |err| {
                 let new_err = match err {
                     EVMError::Transaction(e) => EVMError::Transaction(e),
@@ -194,7 +199,7 @@ where
                 ?transaction,
                 "Executed transaction"
             );
-
+         println!("state is {:?}", &state);
             evm.db_mut().commit(state);
 
             // append gas used
@@ -218,6 +223,8 @@ where
                 .then_some(1),
             });
         }
+        // let (receipts, cumulative_gas_used) = parallel::parallel_execute(block, &mut evm, is_regolith)?;   // todo error fix
+
         drop(evm);
 
         Ok((receipts, cumulative_gas_used))
@@ -250,7 +257,7 @@ impl<EvmConfig, DB> OpBlockExecutor<EvmConfig, DB> {
 
     /// Returns mutable reference to the state that wraps the underlying database.
     #[allow(unused)]
-    fn state_mut(&mut self) -> &mut State<DB> {
+    pub fn state_mut(&mut self) -> &mut State<DB> {
         &mut self.state
     }
 }
@@ -380,7 +387,7 @@ impl<EvmConfig, DB> OpBatchExecutor<EvmConfig, DB> {
 
     /// Returns mutable reference to the state that wraps the underlying database.
     #[allow(unused)]
-    fn state_mut(&mut self) -> &mut State<DB> {
+    pub fn state_mut(&mut self) -> &mut State<DB> {
         self.executor.state_mut()
     }
 }
@@ -399,7 +406,7 @@ where
         let (receipts, _gas_used) =
             self.executor.execute_without_verification(block, total_difficulty)?;
 
-        validate_block_post_execution(block, self.executor.chain_spec(), &receipts)?;
+        validate_block_post_execution(block, self.executor.chain_spec(), &receipts).expect("failed here sglk");
 
         // prepare the state according to the prune mode
         let retention = self.batch_record.bundle_retention(block.number);
@@ -641,4 +648,9 @@ mod tests {
         assert!(deposit_receipt.deposit_nonce.is_some());
         assert!(tx_receipt.deposit_nonce.is_none());
     }
+
 }
+pub fn executor_provider(chain_spec: Arc<ChainSpec>) -> OpExecutorProvider<OptimismEvmConfig> {
+    OpExecutorProvider { chain_spec, evm_config: Default::default() }
+}
+

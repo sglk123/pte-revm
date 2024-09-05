@@ -31,6 +31,8 @@ revm-primitives.workspace = true
 # misc
 thiserror.workspace = true
 tracing.workspace = true
+sha3 = "0.10.8"
+hex = "0.4.3"
 
 [dev-dependencies]
 reth-revm = { workspace = true, features = ["test-utils"] }
@@ -42,3 +44,7 @@ optimism = [
     "reth-optimism-consensus/optimism",
     "reth-revm/optimism",
 ]
+
+#[[bin]]
+#name = "execute"       # 可执行文件的名称
+#path = "src/execute.rs"  # 可执行文件的源代码路径

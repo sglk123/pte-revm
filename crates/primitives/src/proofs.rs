@@ -61,12 +61,13 @@ pub fn calculate_receipt_root_optimism(
                 r
             })
             .collect::<Vec<_>>();
+       println!("sglk receipt are {:?}",&receipts);
 
         return ordered_trie_root_with_encoder(receipts.as_slice(), |r, buf| {
             r.encode_inner(buf, false)
         })
     }
-
+    println!("sglk receipt are {:?}",&receipts);
     ordered_trie_root_with_encoder(receipts, |r, buf| r.encode_inner(buf, false))
 }
 
